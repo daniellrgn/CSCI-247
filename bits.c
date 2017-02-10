@@ -166,7 +166,7 @@ NOTES:
  /*Returns result with bits set in the range lowbit-highbit*/
 int dl10(int highbit, int lowbit) {
   /*Makes a mask for bits > lowbit and bits < highbit, saves the intersections*/
-  return (~0<< lowbit) & ~(~0<< highbit <<1);
+  return (~0 << lowbit) & ~(~0 << highbit << 1);
 }
 /*
  *
@@ -218,22 +218,17 @@ int dl12(int x, int y) {
  /*Returns 1 if an odd number of bits are set in x, 0 if even*/
 int dl13(int x) {
   /*Pair up most and least significant pairs of bytes. x
-  now has a number of set bits in its least significant byte
-  equal to the number of unpaired bits after comparison.*/
-  x ^= x>>16;
-
-  /*Pair up 2nd and 1st least sig. bytes. x's least sig byte
+  now has a number of set bits in its least significant pair
+  of bytes equal to the number of unpaired bits after comparison.*/
+  x ^= x >>16;
+  /*Pair up 2nd and 1st least sig bytes. x's least sig byte
   now contains # of set bits equal to the number of unpaired bits.*/
-  x ^= x>>8;
+  x ^= x >> 8;
 
-  //save least sig. byte's unpaired bits into last 4
-  x ^= x>>4;
-  //save last 4 bits upaired into last two
-  x ^= x>>2;
-  //save last two bits unpaired bit to the 1's place if it exists.
-  x ^= x>>1;
-  //x&1 will be 1 if a bit went unpaired, i.e. there were an odd # set in x.
-  return x&1;
+  x ^= x >> 4;  //save least sig. byte's unpaired bits into last 4
+  x ^= x >> 2;  //save last 4 bits upaired into last two
+  x ^= x >> 1;  //save last two bits unpaired bit to the 1's place if it exists.
+  return x & 1;  //x&1 will be 1 if a bit went unpaired, i.e. there were an odd # set in x.
 }
 /*
  *
@@ -252,7 +247,7 @@ int dl13(int x) {
  *   Max ops: 14
  *   Rating: 1
  */
- /*True if x and y aren't the same value*/
+ /*Returns 1 if x and y aren't the same value*/
 int dl14(int x, int y) {
   return ~(~x & ~y) & ~(x & y);
 }
@@ -323,12 +318,12 @@ int dl14(int x, int y) {
  *  Max ops: 25
  *  Rating: 2
  */
- /*Swap byte n with byte m in x.*/
+ /*Swap byte n with byte m in x*/
 int dl15(int x, int n, int m) {
   int nshift, mshift, mask1, mask2, nmask, mmask;
-  //multiply n and m by 8 to find correct number of bits to shift by
-  nshift = n<<3;
-  mshift = m<<3;
+  //shift multiply n and m by 8 to find correct number of bits to shift by
+  nshift = n << 3;
+  mshift = m << 3;
   //create swap masks
   mask1 = 0xFF << nshift;
   mask2 = 0xFF << mshift;
@@ -361,8 +356,8 @@ int dl15(int x, int n, int m) {
  */
 int dl16(int x, int y, int z) {
   /*checks if x is equal to 0, then shifts to extend that value.
-  if !!x == 1, y, else z.*/
-  return ((((!!x)<<31)>>31)&y)|((~(((!!x)<<31)>>31))&z);
+  if !!x == 1, then y. Else z.*/
+  return ((((!!x) << 31) >> 31) & y) | ((~(((!!x) << 31) >> 31)) & z);
 }
 /*
  *
@@ -409,7 +404,7 @@ int dl17(int x) {
 int dl18(int x, int n) {
   int signx = x >> 31; //extend sign bit of x
   //if x is positive, shift x right by n. Else, add (2**n)-1 to x (rounding),
-  //then shift right by n.
+  //then shift right by n to perform division by 2**n.
   return (((x + (1 << n) +(~0)) & signx) | (x & ~signx)) >> n;
 }
 /*
@@ -437,11 +432,10 @@ int dl18(int x, int n) {
  *   Max ops: 6
  *   Rating: 1
  */
- /*Returns a value with every other bit set, starting at the lsb*/
+ /*Returns a value with every other bit set, starting at 0x1*/
 int dl19(void) {
-  //create mask
-  int mask = (0x55<<8)|0x55;
-  mask = (mask<<16)|mask;
+  int mask = (0x55 << 8) | 0x55;
+  mask = (mask << 16)| mask;
   return mask;
 }
 /*
@@ -458,8 +452,8 @@ int dl19(void) {
  */
  /*Returns absolute value of x*/
 int dl1(int x) {
-  int signx = x>>31; //find sign of x
-  return (x&~signx)|(((~x)+1)&signx); //return x if pos or -x if neg
+  int signx = x >> 31; //find sign of x
+  return (x & ~signx) | ((~x+1) & signx); //return x if pos or -x if neg
 }
 /*
  *
@@ -481,9 +475,9 @@ int dl1(int x) {
  *   Rating: 3
  */
 int dl20(int x) {
-  int multr = (x << 1) + x; //multiply x by 2
-  int signm = multr >> 31; // find sign of result
-  return (multr+(3&signm)) >> 2; // add 3 to result before division if multr is negative
+  int multr = (x << 1) + x; //multiply x by 3 using shifts
+  int signm = multr >> 31; // mask of sign of result
+  return (multr+(3 & signm)) >> 2; // add 3 to result before division by shifts if multr is negative
 }
 /*
  * Reproduce the functionality of the following C function
@@ -511,14 +505,14 @@ unsigned dl21(unsigned uf) {
   }
   //subtract 1 from the exponent if doing so maintains normalization
   if (E > 0x00800000){
-    return S|(E-=0x00800000)|M;
+    return S|(E -= 0x00800000)|M;
   }
   //cases if exp field is either 1 or 0:
-  if ((M & 3) == 1){ //catch case, ensure rounding down for M&3==1
-    return S|((E|M)>>1);
+  if ((M & 0x3) == 3){ //round up if last two bits of M are 1s
+    return S|(((E|M)+1) >> 1);
   }
-  //round up if last two bits of M are 11
-  return S|(((E|M)+1)>>1);
+  //if not:
+  return S|((E|M) >> 1);
 }
 /*
  * reproduce the functionality of the following C function
@@ -533,39 +527,40 @@ unsigned dl21(unsigned uf) {
  /*Convert int to normalized float representation, return it parsed as unsigned*/
 unsigned dl22(int x) {
   int i, mshift, S, E, M, grs;
-  // special cases
-  if (x==0){
+  //== special cases ==
+  if (x == 0){
     return x;
   }
-  if((x >= 0x80000000)&&(0x80000040 >= x)){
+  if ((x >= 0x80000000) && (x <= 0x80000040)){
     return 0xCF000000;
   }
+  //===================
 
-  S = x&0x80000000; //save sign bit
-  if (x<0){    //x = abs(x) to get proper significand
-    x = ~x+1;
+  S = x & 0x80000000; //save sign bit
+  if (x < 0){
+    x = ~x+1; //x = abs(x) to get proper significand
   }
 
   i = x;
   mshift = 0;
   while (i > 1){   //find value of exponent needed
-    i = (i >> 1)&0x7FFFFFFF;
+    i = (i >> 1) & 0x7FFFFFFF;
     mshift++;
   }
 
   E = (mshift + 127)<<23; //adjust exponent for bias and shift into position
-  M = (x<<(32-mshift)); //shift off mantissa's leading 1
+  M = (x << (32-mshift)); //shift off mantissa's leading 1
 
-  grs = (M&0x1c0)>>6; //save guard, rounding and sticky bits for rounding
+  grs = M & 0x1c0; //save guard, rounding, and sticky bits for rounding
 
-  if (M&0x3F){   //set sticky bit if needed
-    grs|=1;
+  if (M & 0x3F){   //set sticky bit if needed
+    grs |= 0x40;
   }
 
   M = (M>>9) & 0x7FFFFF; //shift mantissa into position
 
   //round up case:
-  if ((grs > 4) || (grs == 4 && (M&1))){
+  if ((grs > 0x100) || (grs == 0x100 && (M & 0x1))){
     M++;
   }
 
@@ -596,11 +591,11 @@ unsigned dl23(unsigned uf) {
     return uf;
   }
   //case if uf is normalized
-  if(E != 0){
-    return S|(E+=0x00800000)|M;
+  if (E != 0){
+    return S|(E += 0x00800000)|M;
   }
   //denormalized case
-  return S|E|(M<<=1);
+  return S|E|(M <<= 1);
 }
 /*dl24 - return the minimum number of bits required to represent x in
  *             two's complement
@@ -628,31 +623,31 @@ unsigned dl23(unsigned uf) {
 int dl24(int x) {
   int signx = x >> 31; //save sign of x
   //create masks needed
-  int mask1 = (0x55<<8)|0x55;
-  int mask2 = (0x33<<8)|0x33;
-  int mask3 = (0x0F<<8)|0x0F;
+  int mask1 = (0x55 << 8) | 0x55;
+  int mask2 = (0x33 << 8) | 0x33;
+  int mask3 = (0x0F << 8) | 0x0F;
   int mask4 = 0xFF;
-  int mask5 = (0xFF<<8)|0xFF;
-  mask1 = (mask1<<16)|mask1;
-  mask2 = (mask2<<16)|mask2;
-  mask3 = (mask3<<16)|mask3;
-  mask4 = (mask4<<16)|mask4;
+  int mask5 = (0xFF << 8) | 0xFF;
+  mask1 = (mask1 << 16) | mask1;
+  mask2 = (mask2 << 16) | mask2;
+  mask3 = (mask3 << 16) | mask3;
+  mask4 = (mask4 << 16) | mask4;
 
   x = (x & ~signx) | ((~x) & signx); //adjust a negative x to abs(x)-1
 
   //set all bits to the right of the most significant bit
-  x |= x>>1;
-  x |= x>>2;
-  x |= x>>4;
-  x |= x>>8;
-  x |= x>>16;
+  x |= x >> 1;
+  x |= x >> 2;
+  x |= x >> 4;
+  x |= x >> 8;
+  x |= x >> 16;
 
   //find hamming weight of x
-  x = (x & mask1) + ((x>>1) & mask1); //each pair of bits represents # of set bits in that pair
-  x = (x & mask2) + ((x>>2) & mask2); //every 4 bits represents is sum of its pair values
-  x = (x & mask3) + ((x>>4) & mask3); //every byte reps the sum of its 4s
-  x = (x & mask4) + ((x>>8) & mask4); //every two bytes rep the sum of their bytes
-  x = (x & mask5) + ((x>>16) & mask5);//x = number of set bits
+  x = (x & mask1) + ((x >> 1) & mask1); //each pair of bits represents # of set bits in that pair
+  x = (x & mask2) + ((x >> 2) & mask2); //every 4 bits represents is sum of its pair values
+  x = (x & mask3) + ((x >> 4) & mask3); //every byte reps the sum of its 4s
+  x = (x & mask4) + ((x >> 8) & mask4); //every two bytes rep the sum of their bytes
+  x = (x & mask5) + ((x >>16) & mask5);//x = number of set bits
   return x+1; //add 1 to account for sign bit
 }
 /*
@@ -671,9 +666,9 @@ int dl24(int x) {
  /*Returns 1 if no overflow, 0 if there was overflow*/
 int dl2(int x, int y) {
   //make sign masks for x, y, and result
-  int sx = x>>31;
-  int sy = y>>31;
-  int sr = (x+y)>>31;
+  int sx = x >> 31;
+  int sy = y >> 31;
+  int sr = (x+y) >> 31;
   //if operand signs match but result sign doesn't, return 0. Else, 1.
   return !(~(sx^sy) & (sx^sr));
 }
@@ -696,9 +691,9 @@ int dl2(int x, int y) {
 int dl3(int x) {
   //save every other bit, then flip them. Return 1 if they were all 1s, else 0.
   int m = 0x55;
-  m = (m<<8)|0x55;
-  m = (m<<16)|m;
-  x = (x&m)^m;
+  m = (m << 8) | 0x55;
+  m = (m << 16)| m;
+  x = (x & m) ^ m;
   return !x;
 }
 /*
@@ -720,9 +715,9 @@ int dl3(int x) {
 int dl4(int x) {
   //save every other bit, then flip them. Return 1 if they were all 1s, else 0.
   int m = 0xAA;
-  m = (m<<8)|0xAA;
-  m = (m<<16)|m;
-  x = (x&m)^m;
+  m = (m << 8) | 0xAA;
+  m = (m << 16)| m;
+  x = (x & m) ^ m;
   return !x;
 }
 /*
@@ -744,9 +739,9 @@ int dl4(int x) {
 int dl5(int x) {
   //save every other bit, then flip them. Return 1 if any were 1, else 0.
   int m = 0x55;
-  m = (m<<8)|0x55;
-  m = (m<<16)|m;
-  x = x&m;
+  m = (m << 8) | 0x55;
+  m = (m << 16)| m;
+  x = x & m;
   return !!x;
 }
 /*
@@ -769,9 +764,9 @@ int dl5(int x) {
 int dl6(int x) {
   //save every other bit, then flip them. Return 1 if any were 1, else 0.
   int m = 0xAA;
-  m = (m<<8)|0xAA;
-  m = (m<<16)|m;
-  x = x&m;
+  m = (m << 8) | 0xAA;
+  m = (m << 16)| m;
+  x = x & m;
   return !!x;
 }
 /*
@@ -811,7 +806,7 @@ int dl7(int x) {
  */
  /*Uses DeMorgan's law, negated*/
 int dl8(int x, int y) {
-  return ~(~x|~y);
+  return ~(~x | ~y);
 }
 /*
  *
@@ -833,22 +828,22 @@ int dl8(int x, int y) {
  /*Find the hamming weight of x*/
 int dl9(int x) {
   //create masks needed
-  int mask1 = (0x55<<8)|0x55;
-  int mask2 = (0x33<<8)|0x33;
-  int mask3 = (0x0F<<8)|0x0F;
+  int mask1 = (0x55 << 8) | 0x55;
+  int mask2 = (0x33 << 8) | 0x33;
+  int mask3 = (0x0F << 8) | 0x0F;
   int mask4 = 0xFF;
-  int mask5 = (0xFF<<8)|0xFF;
-  mask1 = (mask1<<16)|mask1;
-  mask2 = (mask2<<16)|mask2;
-  mask3 = (mask3<<16)|mask3;
-  mask4 = (mask4<<16)|mask4;
+  int mask5 = (0xFF << 8) | 0xFF;
+  mask1 = (mask1 << 16) | mask1;
+  mask2 = (mask2 << 16) | mask2;
+  mask3 = (mask3 << 16) | mask3;
+  mask4 = (mask4 << 16) | mask4;
 
   //find hamming weight of x
   x = (x & mask1) + ((x>>1) & mask1); //each pair of bits represents # of set bits in that pair
   x = (x & mask2) + ((x>>2) & mask2); //every 4 bits represents is sum of its pair values
   x = (x & mask3) + ((x>>4) & mask3); //every byte reps the sum of its 4s
   x = (x & mask4) + ((x>>8) & mask4); //every two bytes rep the sum of their bytes
-  x = (x & mask5) + ((x>>16) & mask5);//x = number of set bits
+  x = (x & mask5) + ((x>>16)& mask5);//x = number of set bits
 
   return x;
 }
