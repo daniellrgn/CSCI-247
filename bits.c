@@ -384,8 +384,8 @@ int dl17(int x) {
  */
 int dl18(int x, int n) {
   int signx;
-    signx = x >> 31;
-    return (((x + (1 << n) +((~1)+1)) & signx) | (x & ~signx)) >> n;
+  signx = x >> 31;
+  return (((x + (1 << n) +((~1)+1)) & signx) | (x & ~signx)) >> n;
 }
 /*
  *
@@ -794,7 +794,6 @@ int dl9(int x) {
   x = (x & mask3) + ((x>>4) & mask3);
   x = (x & mask4) + ((x>>8) & mask4);
   x = (x & mask5) + ((x>>16) & mask5);
-  
+
   return x;
 }
-
