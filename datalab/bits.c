@@ -794,6 +794,7 @@ int dl9(int x) {
   x = (x & mask3) + ((x>>4) & mask3);
   x = (x & mask4) + ((x>>8) & mask4);
   x = (x & mask5) + ((x>>16) & mask5);
-
+  
   return x;
 }
+
