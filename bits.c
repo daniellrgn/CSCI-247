@@ -163,8 +163,10 @@ NOTES:
  *   Max ops: 12
  *   Rating: 3
  */
+ /*Returns result with bits set in the range lowbit-highbit*/
 int dl10(int highbit, int lowbit) {
-  return (~0<<lowbit) & ~(~0<<(highbit)<<1);
+  /*Makes a mask for bits > lowbit and bits < highbit, saves the intersections*/
+  return (~0<< lowbit) & ~(~0<< highbit <<1);
 }
 /*
  *
@@ -181,6 +183,7 @@ int dl10(int highbit, int lowbit) {
  *   Max ops: 5
  *   Rating: 1
  */
+ /*Uses DeMorgan's law of logical negation*/
 int dl11(int x, int y) {
   return ~x & ~y;
 }
@@ -195,6 +198,7 @@ int dl11(int x, int y) {
  *   Max ops: 8
  *   Rating: 1
  */
+ /*Inverse of dl11, again with DeMorgan's*/
 int dl12(int x, int y) {
   return ~(~x & ~y);
 }
@@ -211,12 +215,24 @@ int dl12(int x, int y) {
  *   Max ops: 20
  *   Rating: 4
  */
+ /*Returns 1 if an odd number of bits are set in x, 0 if even*/
 int dl13(int x) {
+  /*Pair up most and least significant pairs of bytes. x
+  now has a number of set bits in its least significant byte
+  equal to the number of unpaired bits after comparison.*/
   x ^= x>>16;
+
+  /*Pair up 2nd and 1st least sig. bytes. x's least sig byte
+  now contains # of set bits equal to the number of unpaired bits.*/
   x ^= x>>8;
+
+  //save least sig. byte's unpaired bits into last 4
   x ^= x>>4;
+  //save last 4 bits upaired into last two
   x ^= x>>2;
+  //save last two bits unpaired bit to the 1's place if it exists.
   x ^= x>>1;
+  //x&1 will be 1 if a bit went unpaired, i.e. there were an odd # set in x.
   return x&1;
 }
 /*
@@ -236,6 +252,7 @@ int dl13(int x) {
  *   Max ops: 14
  *   Rating: 1
  */
+ /*True if x and y aren't the same value*/
 int dl14(int x, int y) {
   return ~(~x & ~y) & ~(x & y);
 }
@@ -306,18 +323,21 @@ int dl14(int x, int y) {
  *  Max ops: 25
  *  Rating: 2
  */
+ /*Swap byte n with byte m in x.*/
 int dl15(int x, int n, int m) {
   int nshift, mshift, mask1, mask2, nmask, mmask;
-
+  //multiply n and m by 8 to find correct number of bits to shift by
   nshift = n<<3;
   mshift = m<<3;
-  nshift = (8 & nshift) | (16 & nshift);
-  mshift = (8 & mshift) | (16 & mshift);
+  //create swap masks
   mask1 = 0xFF << nshift;
   mask2 = 0xFF << mshift;
+  //save the specified bytes of x and swap their positions
   nmask = (((x & mask1) >> nshift) & 0xFF) << mshift;
   mmask = (((x & mask2) >> mshift) & 0xFF) << nshift;
+  //save the bytes of x not being swapped
   x &= ~(mask1 | mask2);
+  //combine. If n == m, their bits are combined.
   return x | nmask | mmask;
 }
 /*
@@ -340,6 +360,8 @@ int dl15(int x, int n, int m) {
  *   Rating: 3
  */
 int dl16(int x, int y, int z) {
+  /*checks if x is equal to 0, then shifts to extend that value.
+  if !!x == 1, y, else z.*/
   return ((((!!x)<<31)>>31)&y)|((~(((!!x)<<31)>>31))&z);
 }
 /*
@@ -361,6 +383,7 @@ int dl16(int x, int y, int z) {
  *   Rating: 2
  */
 int dl17(int x) {
+  //extends 0 if x&1 == 0. Extends 1 (into -1) if x&1 == 1
   return (x << 31) >> 31;
 }
 /*
@@ -382,12 +405,15 @@ int dl17(int x) {
  *   Max ops: 15
  *   Rating: 2
  */
+ /*Divides x by 2**n.*/
 int dl18(int x, int n) {
-  int signx;
-  signx = x >> 31;
-  return (((x + (1 << n) +((~1)+1)) & signx) | (x & ~signx)) >> n;
+  int signx = x >> 31; //extend sign bit of x
+  //if x is positive, shift x right by n. Else, add (2**n)-1 to x (rounding),
+  //then shift right by n.
+  return (((x + (1 << n) +(~0)) & signx) | (x & ~signx)) >> n;
 }
 /*
+ *
  *
  *
  *
@@ -411,7 +437,9 @@ int dl18(int x, int n) {
  *   Max ops: 6
  *   Rating: 1
  */
+ /*Returns a value with every other bit set, starting at the lsb*/
 int dl19(void) {
+  //create mask
   int mask = (0x55<<8)|0x55;
   mask = (mask<<16)|mask;
   return mask;
