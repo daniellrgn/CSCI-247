@@ -356,8 +356,9 @@ int dl15(int x, int n, int m) {
  */
 int dl16(int x, int y, int z) {
   /*checks if x is equal to 0, then shifts to extend that value.
-  if !!x == 1, then y. Else z.*/
-  return ((((!!x) << 31) >> 31) & y) | ((~(((!!x) << 31) >> 31)) & z);
+  if !x == 0, then y. Else z.*/
+  int ifx = ~0 + !x;
+  return (ifx & y) | (~ifx & z);
 }
 /*
  *
@@ -405,7 +406,7 @@ int dl18(int x, int n) {
   int signx = x >> 31; //extend sign bit of x
   //if x is positive, shift x right by n. Else, add (2**n)-1 to x (rounding),
   //then shift right by n to perform division by 2**n.
-  return (((x + (1 << n) +(~0)) & signx) | (x & ~signx)) >> n;
+  return (x + ((1<<n) & signx) + (signx)) >> n;
 }
 /*
  *
@@ -621,19 +622,10 @@ unsigned dl23(unsigned uf) {
  *  Rating: 4
  */
 int dl24(int x) {
-  int signx = x >> 31; //save sign of x
-  //create masks needed
-  int mask1 = (0x55 << 8) | 0x55;
-  int mask2 = (0x33 << 8) | 0x33;
-  int mask3 = (0x0F << 8) | 0x0F;
-  int mask4 = 0xFF;
-  int mask5 = (0xFF << 8) | 0xFF;
-  mask1 = (mask1 << 16) | mask1;
-  mask2 = (mask2 << 16) | mask2;
-  mask3 = (mask3 << 16) | mask3;
-  mask4 = (mask4 << 16) | mask4;
+  int mask1, mask2, mask3;
+  int signx = ~(x >> 31); //save sign of x
 
-  x = (x & ~signx) | ((~x) & signx); //adjust a negative x to abs(x)-1
+  x = (x & signx) | ~(x | signx); //adjust a negative x to abs(x)-1
 
   //set all bits to the right of the most significant bit
   x |= x >> 1;
@@ -642,13 +634,24 @@ int dl24(int x) {
   x |= x >> 8;
   x |= x >> 16;
 
+  //make masks needed
+  mask1 = (0x55 << 8) | 0x55;
+  mask1 = (mask1 << 16) | mask1;
+
+  mask2 = (0x33 << 8) | 0x33;
+  mask2 = (mask2 << 16) | mask2;
+
+  mask3 = (0x0F << 8) | 0x0F;
+  mask3 = (mask3 << 16) | mask3;
+
   //find hamming weight of x
-  x = (x & mask1) + ((x >> 1) & mask1); //each pair of bits represents # of set bits in that pair
-  x = (x & mask2) + ((x >> 2) & mask2); //every 4 bits represents is sum of its pair values
-  x = (x & mask3) + ((x >> 4) & mask3); //every byte reps the sum of its 4s
-  x = (x & mask4) + ((x >> 8) & mask4); //every two bytes rep the sum of their bytes
-  x = (x & mask5) + ((x >>16) & mask5);//x = number of set bits
-  return x+1; //add 1 to account for sign bit
+  x = (x & mask1) + ((x>>1) & mask1); //each pair of bits represents # of set bits in that pair
+  x = (x & mask2) + ((x>>2) & mask2); //every 4 bits represents is sum of its pair values
+  x = (x + (x >> 4)) & mask3; //every byte reps the sum of its 4s
+  x += x >> 8; //every two bytes rep the sum of their bytes
+  x += x >> 16;//x = number of set bits
+
+  return (x & 0x7f) + 1; //add 1 for the sign bit
 }
 /*
  *
@@ -785,9 +788,7 @@ int dl6(int x) {
  */
 int dl7(int x) {
   //if x or -x != 0, return 0. Else, return 1.
-  int negx = x >> 31;
-  int posx = (~x + 1) >> 31;
-  return 1 & ~(negx | posx);
+  return 1 & ~((x | (~x+1)) >> 31);
 }
 /*
  *
@@ -827,23 +828,24 @@ int dl8(int x, int y) {
  */
  /*Find the hamming weight of x*/
 int dl9(int x) {
+  int mask1, mask2, mask3;
+
   //create masks needed
-  int mask1 = (0x55 << 8) | 0x55;
-  int mask2 = (0x33 << 8) | 0x33;
-  int mask3 = (0x0F << 8) | 0x0F;
-  int mask4 = 0xFF;
-  int mask5 = (0xFF << 8) | 0xFF;
+  mask1 = (0x55 << 8) | 0x55;
   mask1 = (mask1 << 16) | mask1;
+
+  mask2 = (0x33 << 8) | 0x33;
   mask2 = (mask2 << 16) | mask2;
+
+  mask3 = (0x0F << 8) | 0x0F;
   mask3 = (mask3 << 16) | mask3;
-  mask4 = (mask4 << 16) | mask4;
 
   //find hamming weight of x
   x = (x & mask1) + ((x>>1) & mask1); //each pair of bits represents # of set bits in that pair
   x = (x & mask2) + ((x>>2) & mask2); //every 4 bits represents is sum of its pair values
-  x = (x & mask3) + ((x>>4) & mask3); //every byte reps the sum of its 4s
-  x = (x & mask4) + ((x>>8) & mask4); //every two bytes rep the sum of their bytes
-  x = (x & mask5) + ((x>>16)& mask5);//x = number of set bits
+  x = (x + (x >> 4)) & mask3; //every byte reps the sum of its 4s
+  x += x >> 8; //every two bytes rep the sum of their bytes
+  x += x >> 16;//x = number of set bits
 
-  return x;
+  return x & 0x7f;
 }
